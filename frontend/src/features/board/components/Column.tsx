@@ -1,19 +1,30 @@
 import { ColumnType } from "../types";
+import TaskCard from "./TaskCard";
+import { cn } from "@/lib/utils";
 
 type ColumnProps = {
   column: ColumnType;
-}
+};
 
 function Column({ column }: ColumnProps) {
+  const columnStyles = {
+    "todo": "bg-blue-50 border-blue-200",
+    "in-progress": "bg-yellow-50 border-yellow-200",
+    "for-review": "bg-purple-50 border-purple-200",
+    "done": "bg-green-50 border-green-200"
+  };
+
   return (
-    <div>
-      <h2>{column.title}</h2>
-      {column.tasks.map((task) => (
-        <div key={task.id}>
-          <h3>{task.title}</h3>
-          <p>{task.content}</p>
-        </div>
-      ))}
+    <div className={cn(
+      "flex flex-col flex-1 min-w-[280px] max-w-[280px] h-full m-2 rounded-lg border-2 p-4",
+      columnStyles[column.type]
+    )}>
+      <h2 className="text-xl font-semibold mb-4">{column.title}</h2>
+      <div className="flex-1 overflow-y-auto">
+        {column.tasks.map((task) => (
+          <TaskCard key={task.id} task={task} columnType={column.type} />
+        ))}
+      </div>
     </div>
   );
 }

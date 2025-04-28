@@ -59,19 +59,32 @@ function Board() {
   return (
     <div className="flex flex-row h-full w-full overflow-hidden">
       <Column
-        title="To Do"
-        type="todo"
-        tasks={tasks.filter((task) => task.status === "todo")}
+      column={{
+        title: "To Do",
+        type: "todo",
+        tasks: tasks.filter((task) => task.status === "todo"),
+      }}
       />
       <Column
-        title="In Progress"
-        type="in-progress"
-        tasks={tasks.filter((task) => task.status === "in-progress")}
+      column={{
+        title: "In Progress",
+        type: "in-progress",
+        tasks: tasks.filter((task) => task.status === "in-progress"),
+      }}
       />
       <Column
-        title="Done"
-        type="done"
-        tasks={tasks.filter((task) => task.status === "done")}
+      column={{
+        title: "For Review",
+        type: "for-review",
+        tasks: tasks.filter((task) => task.status === "for-review"),
+      }}
+      />
+      <Column
+      column={{
+        title: "Done",
+        type: "done",
+        tasks: tasks.filter((task) => task.status === "done"),
+      }}
       />
     </div>
   );

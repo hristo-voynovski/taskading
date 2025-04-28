@@ -8,7 +8,7 @@ export interface TaskCardType  {
 };
 
 export interface ColumnType  {
-  type: "todo" | "in-progress" | "done";
   title: string;
+  type: "todo" | "in-progress" | "for-review" | "done";
   tasks: TaskCardType[];
 }
