@@ -57,7 +57,7 @@ function Board() {
   const [tasks, setTasks] = useState<TaskCardType[]>(initialTasks);
 
   return (
-    <div className="flex flex-row h-full w-full overflow-hidden">
+    <div className="flex flex-row flex-1 h-full w-full overflow-hidden justify-center gap-6">
       <Column
       column={{
         title: "To Do",
