@@ -1,0 +1,7 @@
+{
+  "name": "taskading-root",
+  "private": true,
+  "scripts": {
+    "fstart": "npm --prefix frontend run dev"
+  }
+}
