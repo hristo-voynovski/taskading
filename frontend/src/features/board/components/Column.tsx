@@ -8,10 +8,10 @@ type ColumnProps = {
 
 function Column({ column }: ColumnProps) {
   const columnStyles = {
-    "todo": "bg-blue-50 border-blue-200",
-    "in-progress": "bg-yellow-50 border-yellow-200",
-    "for-review": "bg-purple-50 border-purple-200",
-    "done": "bg-green-50 border-green-200"
+    "todo": "bg-blue-100 dark:bg-blue-700 border-blue-200 dark:border-blue-600",
+    "in-progress": "bg-yellow-100 dark:bg-yellow-700 border-yellow-200 dark:border-yellow-600",
+    "for-review": "bg-purple-100 dark:bg-purple-700 border-purple-200 dark:border-purple-600",
+    "done": "bg-green-100 dark:bg-green-700 border-green-200 dark:border-green-600",
   };
 
   return (
