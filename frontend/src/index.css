@@ -7,3 +7,21 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+    .scrollbar::-webkit-scrollbar{
+        width: 0.6rem;
+    }
+
+    .scrollbar::-webkit-scrollbar-track{
+        border-radius: 100vh;
+        background: rgba(201, 201, 201, 0.1);
+    }
+    .scrollbar::-webkit-scrollbar-thumb{
+        background: rgba(177, 177, 177, 0.336);
+        border-radius: 1rem;
+    }
+    
+    .scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(94, 94, 94, 0.5);
+    }
+}
