@@ -16,7 +16,7 @@ function Column({ column }: ColumnProps) {
 
   return (
     <div className={cn(
-      "flex flex-col flex-1 min-w-[280px] max-w-[340px] m-2 rounded-lg border-2 p-4 mt-16 mb-16 overflow-y-scroll scrollbar scroll-smooth",
+      "flex flex-col flex-1 min-w-[280px] max-w-[340px] m-2 rounded-lg border-2 p-4 overflow-y-auto scrollbar scroll-smooth",
       columnStyles[column.type]
     )}>
       <h2 className="text-xl font-semibold mb-4">{column.title}</h2>
