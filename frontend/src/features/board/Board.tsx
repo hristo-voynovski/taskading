@@ -3,7 +3,7 @@ import {
   DndContext,
   useSensor,
   useSensors,
-  closestCenter,
+  closestCorners,
   PointerSensor,
   DragEndEvent,
 } from "@dnd-kit/core";
@@ -113,6 +113,8 @@ function Board() {
   ]);
   // const [tasks, setTasks] = useState<TaskCardType[]>(initialTasks);
 
+  console.log("Tasks:", columns.map((col) => col.tasks).flat());
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -128,44 +130,70 @@ function Board() {
 
     setColumns((prev) => {
       const activeTaskId = active.id as string;
-      const overTaskId = over.id as string;
+      const overId = over.id as string;
 
+      // Find the source column
       const sourceColumnIndex = prev.findIndex((col) =>
         col.tasks.some((task) => task.id === activeTaskId)
       );
-
-      const targetColumnIndex = prev.findIndex((col) =>
-        col.tasks.some((task) => task.id === overTaskId)
-      );
-
-      if (sourceColumnIndex === -1 || targetColumnIndex === -1) return prev;
-
+      if (sourceColumnIndex === -1) return prev;
       const sourceCol = { ...prev[sourceColumnIndex] };
-      const targetCol = { ...prev[targetColumnIndex] };
-
       const taskIndex = sourceCol.tasks.findIndex(
         (task) => task.id === activeTaskId
       );
       const [movedTask] = sourceCol.tasks.splice(taskIndex, 1);
 
+      // Check if dropped on a column (empty column, header, or after last card)
+      const targetColumnIndex = prev.findIndex((col) => col.type === overId);
+      if (targetColumnIndex !== -1) {
+        // Dropped on a column (empty column, header, or after last card)
+        const targetCol = { ...prev[targetColumnIndex] };
+        movedTask.columnId = targetCol.type;
+        movedTask.status = targetCol.type;
+        targetCol.tasks.push(movedTask); // Always insert at end
+        // Recalculate order
+        sourceCol.tasks = sourceCol.tasks.map((task, idx) => ({
+          ...task,
+          order: idx + 1,
+        }));
+        targetCol.tasks = targetCol.tasks.map((task, idx) => ({
+          ...task,
+          order: idx + 1,
+        }));
+        const newColumns = [...prev];
+        newColumns[sourceColumnIndex] = sourceCol;
+        newColumns[targetColumnIndex] = targetCol;
+        return newColumns;
+      }
+
+      // Otherwise, dropped on a task as before
+      const targetColIndex = prev.findIndex((col) =>
+        col.tasks.some((task) => task.id === overId)
+      );
+      if (targetColIndex === -1) return prev;
+      const targetCol = { ...prev[targetColIndex] };
       if (sourceCol.type !== targetCol.type) {
         movedTask.columnId = targetCol.type;
         movedTask.status = targetCol.type;
       }
-
       const overTaskIndex = targetCol.tasks.findIndex(
-        (task) => task.id === overTaskId
+        (task) => task.id === overId
       );
-
       const insertAt =
         overTaskIndex >= 0 ? overTaskIndex : targetCol.tasks.length;
-
       targetCol.tasks.splice(insertAt, 0, movedTask);
-
+      // Recalculate order for tasks in both source and target columns
+      sourceCol.tasks = sourceCol.tasks.map((task, idx) => ({
+        ...task,
+        order: idx + 1,
+      }));
+      targetCol.tasks = targetCol.tasks.map((task, idx) => ({
+        ...task,
+        order: idx + 1,
+      }));
       const newColumns = [...prev];
       newColumns[sourceColumnIndex] = sourceCol;
-      newColumns[targetColumnIndex] = targetCol;
-
+      newColumns[targetColIndex] = targetCol;
       return newColumns;
     });
   };
@@ -195,17 +223,23 @@ function Board() {
       <div className="flex flex-row w-full items-center justify-center">
         <AddTask onSubmit={handleAddTask} />
       </div>
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragEnd={handleDragEnd}
+      >
         <div className="flex flex-row flex-1 w-full overflow-hidden justify-center gap-6">
           {columns.map((column) => (
-            <Column
-              key={column.type}
-              column={{
-                title: column.title,
-                type: column.type,
-                tasks: column.tasks,
-              }}
-            />
+            <>
+              <Column
+                key={column.type}
+                column={{
+                  title: column.title,
+                  type: column.type,
+                  tasks: column.tasks,
+                }}
+              />
+            </>
           ))}
         </div>
       </DndContext>

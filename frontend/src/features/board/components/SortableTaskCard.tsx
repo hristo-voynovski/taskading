@@ -8,8 +8,14 @@ type Props = {
 };
 
 export default function SortableTaskCard({ task }: Props) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: task.id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id, data: { type: "task", task } });
 
   const style = {
     transform: CSS.Transform.toString(transform),

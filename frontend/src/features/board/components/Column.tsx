@@ -14,6 +14,7 @@ type ColumnProps = {
 function Column({ column }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: column.type,
+    data: { type: "column"},
   });
 
   const columnStyles = {
@@ -37,6 +38,7 @@ function Column({ column }: ColumnProps) {
       <h2 className="text-xl font-semibold mb-4">{column.title}</h2>
       <div className="flex-1">
         <SortableContext
+          id={column.type}
           items={column.tasks.map((task) => task.id)}
           strategy={verticalListSortingStrategy}
         >
@@ -44,6 +46,7 @@ function Column({ column }: ColumnProps) {
             <SortableTaskCard key={task.id} task={task} />
           ))}
         </SortableContext>
+        <div className="h-8"></div>
       </div>
     </div>
   );
