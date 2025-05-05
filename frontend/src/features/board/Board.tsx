@@ -1,4 +1,4 @@
-import { act, use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   DndContext,
   useSensor,
@@ -6,7 +6,10 @@ import {
   closestCorners,
   PointerSensor,
   DragEndEvent,
+  DragOverEvent,
+  DragStartEvent,
 } from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
 import Column from "./components/Column";
 import { TaskCardType, ColumnType } from "./types";
 import { Button } from "@/components/ui/button";
@@ -111,9 +114,10 @@ function Board() {
       ],
     },
   ]);
-  // const [tasks, setTasks] = useState<TaskCardType[]>(initialTasks);
 
-  console.log("Tasks:", columns.map((col) => col.tasks).flat());
+  // Track the active task being dragged
+  const [activeTask, setActiveTask] = useState<TaskCardType | null>(null);
+
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -123,79 +127,306 @@ function Board() {
     })
   );
 
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const id = active.id as string;
+
+    // Find the task that's being dragged
+    const draggedTask = columns
+      .map((col) => col.tasks)
+      .flat()
+      .find((task) => task.id === id);
+
+    if (draggedTask) {
+      setActiveTask(draggedTask);
+    }
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+
+    // If no over target or tasks are the same, skip
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    // Find all tasks to work with column data
+    const allTasks = columns.map((col) => col.tasks).flat();
+
+    // Find the tasks we're working with
+    const activeTask = allTasks.find((task) => task.id === activeId);
+    const overTask = allTasks.find((task) => task.id === overId);
+
+    // If we can't find the active task, return early
+    if (!activeTask) {
+      return;
+    }
+
+    // Check if over target is a column (for empty columns)
+    const overColumn = columns.find((col) => col.type === overId);
+    if (overColumn && activeTask.columnId !== overColumn.type) {
+      setColumns((prevColumns) => {
+        const sourceColumnIndex = prevColumns.findIndex(
+          (col) => col.type === activeTask.columnId
+        );
+        const destColumnIndex = prevColumns.findIndex(
+          (col) => col.type === overColumn.type
+        );
+        if (sourceColumnIndex === -1 || destColumnIndex === -1) {
+          return prevColumns;
+        }
+        const newColumns = [...prevColumns];
+        // Remove from source
+        const updatedSourceTasks = newColumns[sourceColumnIndex].tasks.filter(
+          (task) => task.id !== activeTask.id
+        );
+        // Update task for new column
+        const updatedTask = {
+          ...activeTask,
+          columnId: overColumn.type,
+          status: overColumn.type,
+        };
+        // Insert as first task in empty column
+        const updatedDestTasks = [...newColumns[destColumnIndex].tasks, updatedTask];
+        newColumns[sourceColumnIndex] = {
+          ...newColumns[sourceColumnIndex],
+          tasks: updatedSourceTasks,
+        };
+        newColumns[destColumnIndex] = {
+          ...newColumns[destColumnIndex],
+          tasks: updatedDestTasks,
+        };
+        return newColumns;
+      });
+      return;
+    }
+
+    // If we can't find the over task, return early
+    if (!overTask) {
+      return;
+    }
+
+    // If tasks are in different columns, we need to move the task between columns
+    if (activeTask.columnId !== overTask.columnId) {
+      setColumns((prevColumns) => {
+        // Find the source and destination column indexes
+        const sourceColumnIndex = prevColumns.findIndex(
+          (col) => col.type === activeTask.columnId
+        );
+        const destColumnIndex = prevColumns.findIndex(
+          (col) => col.type === overTask.columnId
+        );
+
+        // If we can't find either column, do nothing
+        if (sourceColumnIndex === -1 || destColumnIndex === -1) {
+          return prevColumns;
+        }
+
+        // Create a copy of columns to modify
+        const newColumns = [...prevColumns];
+
+        // Remove task from source column
+        const updatedSourceTasks = newColumns[sourceColumnIndex].tasks.filter(
+          (task) => task.id !== activeTask.id
+        );
+
+        // Create updated task with new columnId and status
+        const updatedTask = {
+          ...activeTask,
+          columnId: overTask.columnId,
+          status: overTask.status,
+        };
+
+        // Find the index where to insert in destination column
+        const overTaskIndex = newColumns[destColumnIndex].tasks.findIndex(
+          (task) => task.id === overTask.id
+        );
+
+        // Insert task into destination column
+        const updatedDestTasks = [...newColumns[destColumnIndex].tasks];
+        updatedDestTasks.splice(overTaskIndex + 1, 0, updatedTask);
+
+        // Update both columns
+        newColumns[sourceColumnIndex] = {
+          ...newColumns[sourceColumnIndex],
+          tasks: updatedSourceTasks,
+        };
+
+        newColumns[destColumnIndex] = {
+          ...newColumns[destColumnIndex],
+          tasks: updatedDestTasks,
+        };
+
+        return newColumns;
+      });
+    }
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
-    if (!over || active.id === over.id) return;
+    // Reset active task
+    setActiveTask(null);
 
-    setColumns((prev) => {
-      const activeTaskId = active.id as string;
-      const overId = over.id as string;
+    // If no over target, just return
+    if (!over) return;
 
-      // Find the source column
-      const sourceColumnIndex = prev.findIndex((col) =>
-        col.tasks.some((task) => task.id === activeTaskId)
-      );
-      if (sourceColumnIndex === -1) return prev;
-      const sourceCol = { ...prev[sourceColumnIndex] };
-      const taskIndex = sourceCol.tasks.findIndex(
-        (task) => task.id === activeTaskId
-      );
-      const [movedTask] = sourceCol.tasks.splice(taskIndex, 1);
+    const activeId = active.id as string;
+    const overId = over.id as string;
 
-      // Check if dropped on a column (empty column, header, or after last card)
-      const targetColumnIndex = prev.findIndex((col) => col.type === overId);
-      if (targetColumnIndex !== -1) {
-        // Dropped on a column (empty column, header, or after last card)
-        const targetCol = { ...prev[targetColumnIndex] };
-        movedTask.columnId = targetCol.type;
-        movedTask.status = targetCol.type;
-        targetCol.tasks.push(movedTask); // Always insert at end
-        // Recalculate order
-        sourceCol.tasks = sourceCol.tasks.map((task, idx) => ({
-          ...task,
-          order: idx + 1,
-        }));
-        targetCol.tasks = targetCol.tasks.map((task, idx) => ({
-          ...task,
-          order: idx + 1,
-        }));
-        const newColumns = [...prev];
-        newColumns[sourceColumnIndex] = sourceCol;
-        newColumns[targetColumnIndex] = targetCol;
+    // If items are the same, no need to do anything
+    if (activeId === overId) return;
+
+    // Find all tasks
+    const allTasks = columns.map((col) => col.tasks).flat();
+
+    // Find the tasks we're working with
+    const activeTask = allTasks.find((task) => task.id === activeId);
+    const overTask = allTasks.find((task) => task.id === overId);
+
+    // If we can't find the active task, return
+    if (!activeTask) return;
+
+    // Check if over target is a column (for empty columns)
+    const overColumn = columns.find((col) => col.type === overId);
+    if (overColumn && activeTask.columnId !== overColumn.type) {
+      setColumns((prevColumns) => {
+        const sourceColumnIndex = prevColumns.findIndex(
+          (col) => col.type === activeTask.columnId
+        );
+        const destColumnIndex = prevColumns.findIndex(
+          (col) => col.type === overColumn.type
+        );
+        if (sourceColumnIndex === -1 || destColumnIndex === -1) return prevColumns;
+        const sourceColumn = prevColumns[sourceColumnIndex];
+        const destColumn = prevColumns[destColumnIndex];
+        const updatedSourceTasks = sourceColumn.tasks.filter(
+          (task) => task.id !== activeId
+        );
+        const updatedTask = {
+          ...activeTask,
+          columnId: overColumn.type,
+          status: overColumn.type,
+        };
+        const updatedDestTasks = [...destColumn.tasks, updatedTask];
+        const newColumns = [...prevColumns];
+        newColumns[sourceColumnIndex] = {
+          ...sourceColumn,
+          tasks: updatedSourceTasks.map((task, idx) => ({
+            ...task,
+            order: idx + 1,
+          })),
+        };
+        newColumns[destColumnIndex] = {
+          ...destColumn,
+          tasks: updatedDestTasks.map((task, idx) => ({
+            ...task,
+            order: idx + 1,
+          })),
+        };
         return newColumns;
-      }
+      });
+      return;
+    }
 
-      // Otherwise, dropped on a task as before
-      const targetColIndex = prev.findIndex((col) =>
-        col.tasks.some((task) => task.id === overId)
-      );
-      if (targetColIndex === -1) return prev;
-      const targetCol = { ...prev[targetColIndex] };
-      if (sourceCol.type !== targetCol.type) {
-        movedTask.columnId = targetCol.type;
-        movedTask.status = targetCol.type;
-      }
-      const overTaskIndex = targetCol.tasks.findIndex(
-        (task) => task.id === overId
-      );
-      const insertAt =
-        overTaskIndex >= 0 ? overTaskIndex : targetCol.tasks.length;
-      targetCol.tasks.splice(insertAt, 0, movedTask);
-      // Recalculate order for tasks in both source and target columns
-      sourceCol.tasks = sourceCol.tasks.map((task, idx) => ({
-        ...task,
-        order: idx + 1,
-      }));
-      targetCol.tasks = targetCol.tasks.map((task, idx) => ({
-        ...task,
-        order: idx + 1,
-      }));
-      const newColumns = [...prev];
-      newColumns[sourceColumnIndex] = sourceCol;
-      newColumns[targetColIndex] = targetCol;
-      return newColumns;
-    });
+    // If we can't find either task, return
+    if (!overTask) return;
+
+    // Handle reordering within the same column
+    if (activeTask.columnId === overTask.columnId) {
+      setColumns((prevColumns) => {
+        // Find the column index
+        const columnIndex = prevColumns.findIndex(
+          (col) => col.type === activeTask.columnId
+        );
+
+        if (columnIndex === -1) return prevColumns;
+
+        const column = prevColumns[columnIndex];
+
+        // Find indices for the active and over tasks
+        const activeIndex = column.tasks.findIndex(
+          (task) => task.id === activeId
+        );
+        const overIndex = column.tasks.findIndex((task) => task.id === overId);
+
+        // Create new columns with the reordered tasks
+        const newColumns = [...prevColumns];
+        newColumns[columnIndex] = {
+          ...column,
+          tasks: arrayMove(column.tasks, activeIndex, overIndex).map(
+            (task, idx) => ({
+              ...task,
+              order: idx + 1, // Update order based on new position
+            })
+          ),
+        };
+
+        return newColumns;
+      });
+    } else {
+      // This is a fallback - the task should have already been moved in handleDragOver
+      // But we'll handle the case where a task is moved to a different column here too
+      setColumns((prevColumns) => {
+        // Find indices for source and destination columns
+        const sourceColumnIndex = prevColumns.findIndex(
+          (col) => col.type === activeTask.columnId
+        );
+        const destColumnIndex = prevColumns.findIndex(
+          (col) => col.type === overTask.columnId
+        );
+
+        if (sourceColumnIndex === -1 || destColumnIndex === -1)
+          return prevColumns;
+
+        // Remove task from source column
+        const sourceColumn = prevColumns[sourceColumnIndex];
+        const destColumn = prevColumns[destColumnIndex];
+
+        const updatedSourceTasks = sourceColumn.tasks.filter(
+          (task) => task.id !== activeId
+        );
+
+        // Find the position in the destination column
+        const overTaskIndex = destColumn.tasks.findIndex(
+          (task) => task.id === overId
+        );
+
+        // Create new task with updated properties
+        const updatedTask = {
+          ...activeTask,
+          columnId: overTask.columnId,
+          status: overTask.status,
+        };
+
+        // Insert task into destination column at the right position
+        const updatedDestTasks = [...destColumn.tasks];
+        updatedDestTasks.splice(overTaskIndex + 1, 0, updatedTask);
+
+        // Create new columns array with updated columns
+        const newColumns = [...prevColumns];
+        newColumns[sourceColumnIndex] = {
+          ...sourceColumn,
+          tasks: updatedSourceTasks.map((task, idx) => ({
+            ...task,
+            order: idx + 1, // Update order in source column
+          })),
+        };
+
+        newColumns[destColumnIndex] = {
+          ...destColumn,
+          tasks: updatedDestTasks.map((task, idx) => ({
+            ...task,
+            order: idx + 1, // Update order in destination column
+          })),
+        };
+
+        return newColumns;
+      });
+    }
   };
 
   const handleAddTask = (task: Omit<TaskCardType, "id" | "order">) => {
@@ -226,20 +457,20 @@ function Board() {
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
+        onDragOver={handleDragOver}
       >
         <div className="flex flex-row flex-1 w-full overflow-hidden justify-center gap-6">
           {columns.map((column) => (
-            <>
-              <Column
-                key={column.type}
-                column={{
-                  title: column.title,
-                  type: column.type,
-                  tasks: column.tasks,
-                }}
-              />
-            </>
+            <Column
+              key={column.type}
+              column={{
+                title: column.title,
+                type: column.type,
+                tasks: column.tasks,
+              }}
+            />
           ))}
         </div>
       </DndContext>
