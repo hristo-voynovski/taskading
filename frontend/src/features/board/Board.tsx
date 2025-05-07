@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   DndContext,
   useSensor,
@@ -12,7 +12,6 @@ import {
 import { arrayMove } from "@dnd-kit/sortable";
 import Column from "./components/Column";
 import { TaskCardType, ColumnType } from "./types";
-import { Button } from "@/components/ui/button";
 import AddTask from "./components/AddTask";
 
 function Board() {
