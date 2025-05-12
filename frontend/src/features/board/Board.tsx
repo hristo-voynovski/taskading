@@ -13,8 +13,15 @@ import { arrayMove } from "@dnd-kit/sortable";
 import Column from "./components/Column";
 import { TaskCardType, ColumnType } from "./types";
 import AddTask from "./components/AddTask";
+import { useBoard } from "./hooks/useBoard";
+
+const boardId = "0dc87d56-0407-4569-bfe0-50e25778fc12";
 
 function Board() {
+  const { data, isLoading } = useBoard(boardId);
+  console.log("tasks", data);
+  console.log("isLoading", isLoading);
+
   const [columns, setColumns] = useState<ColumnType[]>([
     {
       title: "To Do",
@@ -23,7 +30,7 @@ function Board() {
         {
           id: "1",
           columnId: "todo",
-          order: 1,
+          position: 1,
           title: "Plan project",
           content: "Outline the project requirements and deliverables.",
           status: "todo",
@@ -31,7 +38,7 @@ function Board() {
         {
           id: "2",
           columnId: "todo",
-          order: 2,
+          position: 2,
           title: "Set up repo",
           content: "Initialize git repository and setup project structure.",
           status: "todo",
@@ -39,7 +46,7 @@ function Board() {
         {
           id: "3",
           columnId: "todo",
-          order: 3,
+          position: 3,
           title: "Install dependencies",
           content: "Install all required npm packages.",
           status: "todo",
@@ -53,7 +60,7 @@ function Board() {
         {
           id: "4",
           columnId: "in-progress",
-          order: 1,
+          position: 1,
           title: "Develop UI",
           content: "Work on the main user interface components.",
           status: "in-progress",
@@ -61,7 +68,7 @@ function Board() {
         {
           id: "5",
           columnId: "in-progress",
-          order: 2,
+          position: 2,
           title: "Implement drag & drop",
           content: "Add drag and drop functionality for tasks.",
           status: "in-progress",
@@ -75,7 +82,7 @@ function Board() {
         {
           id: "6",
           columnId: "for-review",
-          order: 1,
+          position: 1,
           title: "Code review",
           content: "Review the code for best practices and bugs.",
           status: "for-review",
@@ -83,7 +90,7 @@ function Board() {
         {
           id: "7",
           columnId: "for-review",
-          order: 2,
+          position: 2,
           title: "Test features",
           content: "Test all implemented features for correctness.",
           status: "for-review",
@@ -97,7 +104,7 @@ function Board() {
         {
           id: "8",
           columnId: "done",
-          order: 1,
+          position: 1,
           title: "Initial commit",
           content: "Pushed the initial commit to the repository.",
           status: "done",
@@ -105,7 +112,7 @@ function Board() {
         {
           id: "9",
           columnId: "done",
-          order: 2,
+          position: 2,
           title: "Setup CI/CD",
           content: "Configured continuous integration and deployment.",
           status: "done",
@@ -116,7 +123,6 @@ function Board() {
 
   // Track the active task being dragged
   const [activeTask, setActiveTask] = useState<TaskCardType | null>(null);
-
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -189,7 +195,10 @@ function Board() {
           status: overColumn.type,
         };
         // Insert as first task in empty column
-        const updatedDestTasks = [...newColumns[destColumnIndex].tasks, updatedTask];
+        const updatedDestTasks = [
+          ...newColumns[destColumnIndex].tasks,
+          updatedTask,
+        ];
         newColumns[sourceColumnIndex] = {
           ...newColumns[sourceColumnIndex],
           tasks: updatedSourceTasks,
@@ -299,7 +308,8 @@ function Board() {
         const destColumnIndex = prevColumns.findIndex(
           (col) => col.type === overColumn.type
         );
-        if (sourceColumnIndex === -1 || destColumnIndex === -1) return prevColumns;
+        if (sourceColumnIndex === -1 || destColumnIndex === -1)
+          return prevColumns;
         const sourceColumn = prevColumns[sourceColumnIndex];
         const destColumn = prevColumns[destColumnIndex];
         const updatedSourceTasks = sourceColumn.tasks.filter(
@@ -316,14 +326,14 @@ function Board() {
           ...sourceColumn,
           tasks: updatedSourceTasks.map((task, idx) => ({
             ...task,
-            order: idx + 1,
+            position: idx + 1,
           })),
         };
         newColumns[destColumnIndex] = {
           ...destColumn,
           tasks: updatedDestTasks.map((task, idx) => ({
             ...task,
-            order: idx + 1,
+            position: idx + 1,
           })),
         };
         return newColumns;
@@ -359,7 +369,7 @@ function Board() {
           tasks: arrayMove(column.tasks, activeIndex, overIndex).map(
             (task, idx) => ({
               ...task,
-              order: idx + 1, // Update order based on new position
+              position: idx + 1, // Update position based on new position
             })
           ),
         };
@@ -411,7 +421,7 @@ function Board() {
           ...sourceColumn,
           tasks: updatedSourceTasks.map((task, idx) => ({
             ...task,
-            order: idx + 1, // Update order in source column
+            position: idx + 1, // Update position in source column
           })),
         };
 
@@ -419,7 +429,7 @@ function Board() {
           ...destColumn,
           tasks: updatedDestTasks.map((task, idx) => ({
             ...task,
-            order: idx + 1, // Update order in destination column
+            position: idx + 1, // Update position in destination column
           })),
         };
 
@@ -428,12 +438,12 @@ function Board() {
     }
   };
 
-  const handleAddTask = (task: Omit<TaskCardType, "id" | "order">) => {
+  const handleAddTask = (task: Omit<TaskCardType, "id" | "position">) => {
     const newTask = {
       ...task,
       id: crypto.randomUUID(),
-      order:
-        columns.find((col) => col.type === task.columnId)?.tasks.length || 0, //0 for order could be problematic for reordering tasks
+      position:
+        columns.find((col) => col.type === task.columnId)?.tasks.length || 0, //0 for position could be problematic for reordering tasks
     };
     setColumns((prev) =>
       prev.map((col) => {
@@ -461,16 +471,43 @@ function Board() {
         onDragOver={handleDragOver}
       >
         <div className="flex flex-row flex-1 w-full overflow-hidden justify-center gap-6">
-          {columns.map((column) => (
-            <Column
-              key={column.type}
-              column={{
-                title: column.title,
-                type: column.type,
-                tasks: column.tasks,
-              }}
-            />
-          ))}
+          <Column
+            key="todo"
+            column={{
+              title: "To Do",
+              type: "todo",
+              tasks: data?.filter((task) => task.status === "todo")?.map(task => ({ ...task, position: task.position })) || [],
+              //match type to column in sql somehow - check tomorrow
+            }}
+          ></Column>
+          <Column
+            key="in-progress"
+            column={{
+              title: "In Progress",
+              type: "in-progress",
+              tasks:
+                data?.filter((task) => task.status === "in-progress")?.map(task => ({ ...task, position: task.position })) || [],
+              //match type to column in sql somehow - check tomorrow
+            }}
+          ></Column>
+          <Column
+            key="for-review"
+            column={{
+              title: "For Review",
+              type: "for-review",
+              tasks: data?.filter((task) => task.status === "for-review")?.map(task => ({ ...task, position: task.position })) || [],
+              //match type to column in sql somehow - check tomorrow
+            }}
+          ></Column>
+          <Column
+            key="done"
+            column={{
+              title: "Done",
+              type: "done",
+              tasks: data?.filter((task) => task.status === "done")?.map(task => ({ ...task, position: task.position })) || [],
+              //match type to column in sql somehow - check tomorrow
+            }}
+          ></Column>
         </div>
       </DndContext>
     </div>

@@ -1,7 +1,7 @@
 export interface TaskCardType  {
   id: string;
   columnId: string;
-  order: number;
+  position: number;
   title: string;
   content: string;
   status: "todo" | "in-progress" | "for-review" | "done";
