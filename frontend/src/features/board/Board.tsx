@@ -477,7 +477,6 @@ function Board() {
               title: "To Do",
               type: "todo",
               tasks: data?.filter((task) => task.status === "todo")?.map(task => ({ ...task, position: task.position })) || [],
-              //match type to column in sql somehow - check tomorrow
             }}
           ></Column>
           <Column
@@ -487,7 +486,6 @@ function Board() {
               type: "in-progress",
               tasks:
                 data?.filter((task) => task.status === "in-progress")?.map(task => ({ ...task, position: task.position })) || [],
-              //match type to column in sql somehow - check tomorrow
             }}
           ></Column>
           <Column
@@ -496,7 +494,6 @@ function Board() {
               title: "For Review",
               type: "for-review",
               tasks: data?.filter((task) => task.status === "for-review")?.map(task => ({ ...task, position: task.position })) || [],
-              //match type to column in sql somehow - check tomorrow
             }}
           ></Column>
           <Column
@@ -505,7 +502,6 @@ function Board() {
               title: "Done",
               type: "done",
               tasks: data?.filter((task) => task.status === "done")?.map(task => ({ ...task, position: task.position })) || [],
-              //match type to column in sql somehow - check tomorrow
             }}
           ></Column>
         </div>
