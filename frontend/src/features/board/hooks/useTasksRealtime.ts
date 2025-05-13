@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 export const useTasksRealtime = (boardId: string) => {
   const queryClient = useQueryClient();
   console.log("In useTasksRealtime", boardId);
+  console.log(`Change received at ${new Date().toLocaleTimeString()}`);
 
   useEffect(() => {
     const channel = supabase
@@ -15,11 +16,14 @@ export const useTasksRealtime = (boardId: string) => {
           event: "INSERT",
           schema: "public",
           table: "tasks",
-          filter: `board_id=eq.${boardId}`,
         },
         (payload) => {
           console.log("Change received!", payload);
-          queryClient.invalidateQueries({ queryKey: ["tasks", boardId] });
+          queryClient.refetchQueries({ queryKey: ["tasks", boardId] });
+          // queryClient.setQueryData(["tasks", boardId], (oldData: any) => {
+          //   if (!oldData) return [payload.new];
+          //   return [...oldData, payload.new];
+          // });    OPTIONAL alternative for refetching 
         }
       )
       .subscribe();

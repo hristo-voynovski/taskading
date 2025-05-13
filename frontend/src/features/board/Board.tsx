@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   DndContext,
   useSensor,
@@ -14,112 +14,53 @@ import Column from "./components/Column";
 import { TaskCardType, ColumnType } from "./types";
 import AddTask from "./components/AddTask";
 import { useBoard } from "./hooks/useBoard";
+import { createTask } from "./queries/createTask"; // <-- import your API
+import { useTasksRealtime } from "./hooks/useTasksRealtime"; // <-- import the hook
 
 const boardId = "0dc87d56-0407-4569-bfe0-50e25778fc12";
 
 function Board() {
   const { data, isLoading } = useBoard(boardId);
+  // Add real-time updates for tasks
+  useTasksRealtime(boardId);
   console.log("tasks", data);
   console.log("isLoading", isLoading);
 
-  const [columns, setColumns] = useState<ColumnType[]>([
-    {
-      title: "To Do",
-      type: "todo",
-      tasks: [
-        {
-          id: "1",
-          columnId: "todo",
-          position: 1,
-          title: "Plan project",
-          content: "Outline the project requirements and deliverables.",
-          status: "todo",
-        },
-        {
-          id: "2",
-          columnId: "todo",
-          position: 2,
-          title: "Set up repo",
-          content: "Initialize git repository and setup project structure.",
-          status: "todo",
-        },
-        {
-          id: "3",
-          columnId: "todo",
-          position: 3,
-          title: "Install dependencies",
-          content: "Install all required npm packages.",
-          status: "todo",
-        },
-      ],
-    },
-    {
-      title: "In Progress",
-      type: "in-progress",
-      tasks: [
-        {
-          id: "4",
-          columnId: "in-progress",
-          position: 1,
-          title: "Develop UI",
-          content: "Work on the main user interface components.",
-          status: "in-progress",
-        },
-        {
-          id: "5",
-          columnId: "in-progress",
-          position: 2,
-          title: "Implement drag & drop",
-          content: "Add drag and drop functionality for tasks.",
-          status: "in-progress",
-        },
-      ],
-    },
-    {
-      title: "For Review",
-      type: "for-review",
-      tasks: [
-        {
-          id: "6",
-          columnId: "for-review",
-          position: 1,
-          title: "Code review",
-          content: "Review the code for best practices and bugs.",
-          status: "for-review",
-        },
-        {
-          id: "7",
-          columnId: "for-review",
-          position: 2,
-          title: "Test features",
-          content: "Test all implemented features for correctness.",
-          status: "for-review",
-        },
-      ],
-    },
-    {
-      title: "Done",
-      type: "done",
-      tasks: [
-        {
-          id: "8",
-          columnId: "done",
-          position: 1,
-          title: "Initial commit",
-          content: "Pushed the initial commit to the repository.",
-          status: "done",
-        },
-        {
-          id: "9",
-          columnId: "done",
-          position: 2,
-          title: "Setup CI/CD",
-          content: "Configured continuous integration and deployment.",
-          status: "done",
-        },
-      ],
-    },
-  ]);
+  const [columns, setColumns] = useState<ColumnType[]>([]);
+
+  useEffect(() => {
+    if (!data) return;
+    setColumns([
+      {
+        title: "To Do",
+        type: "todo",
+        tasks: data
+          .filter((task) => task.status === "todo")
+          .map((task) => ({ ...task, position: task.position })),
+      },
+      {
+        title: "In Progress",
+        type: "in-progress",
+        tasks: data
+          .filter((task) => task.status === "in-progress")
+          .map((task) => ({ ...task, position: task.position })),
+      },
+      {
+        title: "For Review",
+        type: "for-review",
+        tasks: data
+          .filter((task) => task.status === "for-review")
+          .map((task) => ({ ...task, position: task.position })),
+      },
+      {
+        title: "Done",
+        type: "done",
+        tasks: data
+          .filter((task) => task.status === "done")
+          .map((task) => ({ ...task, position: task.position })),
+      },
+    ]);
+  }, [data]);
 
   // Track the active task being dragged
   const [activeTask, setActiveTask] = useState<TaskCardType | null>(null);
@@ -135,7 +76,7 @@ function Board() {
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
     const id = active.id as string;
-
+    console.log("drag start", id);
     // Find the task that's being dragged
     const draggedTask = columns
       .map((col) => col.tasks)
@@ -438,24 +379,35 @@ function Board() {
     }
   };
 
-  const handleAddTask = (task: Omit<TaskCardType, "id" | "position">) => {
-    const newTask = {
-      ...task,
-      id: crypto.randomUUID(),
-      position:
-        columns.find((col) => col.type === task.columnId)?.tasks.length || 0, //0 for position could be problematic for reordering tasks
-    };
-    setColumns((prev) =>
-      prev.map((col) => {
-        if (col.type === task.columnId) {
-          return {
-            ...col,
-            tasks: [...col.tasks, newTask],
-          };
-        }
-        return col;
-      })
-    );
+  console.log("columns", columns);
+  console.log("data", data);
+  const handleAddTask = async (task: Omit<TaskCardType, "id" | "position">) => {
+    try {
+      // Call your API to create the task in the backend
+      const newTask = await createTask({
+        ...task,
+        boardId, // make sure boardId is included
+        // position: (columns.find(col => col.type === task.status)?.tasks.length ?? 0) + 1,
+      });
+      
+      // Add the new task to the correct column in the UI
+      setColumns((prev) =>
+        prev.map((col) =>
+          col.type === newTask.status
+            ? {
+                ...col,
+                tasks: [
+                  ...col.tasks,
+                  { ...newTask, position: col.tasks.length + 1 },
+                ],
+              }
+            : col
+        )
+      );
+    } catch (err) {
+      // Optionally handle error (show toast, etc.)
+      console.error("Failed to create task", err);
+    }
   };
 
   return (
@@ -471,39 +423,16 @@ function Board() {
         onDragOver={handleDragOver}
       >
         <div className="flex flex-row flex-1 w-full overflow-hidden justify-center gap-6">
-          <Column
-            key="todo"
-            column={{
-              title: "To Do",
-              type: "todo",
-              tasks: data?.filter((task) => task.status === "todo")?.map(task => ({ ...task, position: task.position })) || [],
-            }}
-          ></Column>
-          <Column
-            key="in-progress"
-            column={{
-              title: "In Progress",
-              type: "in-progress",
-              tasks:
-                data?.filter((task) => task.status === "in-progress")?.map(task => ({ ...task, position: task.position })) || [],
-            }}
-          ></Column>
-          <Column
-            key="for-review"
-            column={{
-              title: "For Review",
-              type: "for-review",
-              tasks: data?.filter((task) => task.status === "for-review")?.map(task => ({ ...task, position: task.position })) || [],
-            }}
-          ></Column>
-          <Column
-            key="done"
-            column={{
-              title: "Done",
-              type: "done",
-              tasks: data?.filter((task) => task.status === "done")?.map(task => ({ ...task, position: task.position })) || [],
-            }}
-          ></Column>
+          {columns.map((column) => (
+            <Column
+              key={column.type}
+              column={{
+                title: column.title,
+                type: column.type,
+                tasks: column.tasks,
+              }}
+            />
+          ))}
         </div>
       </DndContext>
     </div>

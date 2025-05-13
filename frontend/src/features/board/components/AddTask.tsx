@@ -22,7 +22,7 @@ import {
 import { TaskCardType } from "../types";
 
 type Props = {
-  onSubmit: (task: Omit<TaskCardType, "id" | "order">) => void;
+  onSubmit: (task: Omit<TaskCardType, "id" | "position">) => void;
 };
 
 function AddTask({ onSubmit }: Props) {
