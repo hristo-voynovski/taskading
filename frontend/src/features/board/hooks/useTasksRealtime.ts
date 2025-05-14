@@ -4,8 +4,8 @@ import { useQueryClient } from "@tanstack/react-query";
 
 export const useTasksRealtime = (boardId: string) => {
   const queryClient = useQueryClient();
-  console.log("In useTasksRealtime", boardId);
-  console.log(`Change received at ${new Date().toLocaleTimeString()}`);
+  // console.log("In useTasksRealtime", boardId);
+  // console.log(`Change received at ${new Date().toLocaleTimeString()}`);
 
   useEffect(() => {
     const channel = supabase

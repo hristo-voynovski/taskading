@@ -10,5 +10,6 @@ export interface TaskCardType  {
 export interface ColumnType  {
   title: string;
   type: "todo" | "in-progress" | "for-review" | "done";
+  columnId: string;
   tasks: TaskCardType[];
 }

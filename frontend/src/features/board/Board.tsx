@@ -16,6 +16,7 @@ import AddTask from "./components/AddTask";
 import { useBoard } from "./hooks/useBoard";
 import { createTask } from "./queries/createTask"; // <-- import your API
 import { useTasksRealtime } from "./hooks/useTasksRealtime"; // <-- import the hook
+import { updateTasks } from "./queries/updateTasks";
 
 const boardId = "0dc87d56-0407-4569-bfe0-50e25778fc12";
 
@@ -23,40 +24,55 @@ function Board() {
   const { data, isLoading } = useBoard(boardId);
   // Add real-time updates for tasks
   useTasksRealtime(boardId);
-  console.log("tasks", data);
-  console.log("isLoading", isLoading);
+  // console.log("tasks", data);
+  // console.log("isLoading", isLoading);
 
   const [columns, setColumns] = useState<ColumnType[]>([]);
 
   useEffect(() => {
+    // console.log("In useEffect row 33");
     if (!data) return;
     setColumns([
       {
         title: "To Do",
         type: "todo",
+        columnId:
+          data.find((task) => task.status === "todo")?.columnId ?? "todo",
         tasks: data
           .filter((task) => task.status === "todo")
+          .sort((a, b) => a.position - b.position)
           .map((task) => ({ ...task, position: task.position })),
       },
       {
         title: "In Progress",
         type: "in-progress",
+        columnId:
+          data.find((task) => task.status === "in-progress")?.columnId ??
+          "in-progress",
         tasks: data
           .filter((task) => task.status === "in-progress")
+          .sort((a, b) => a.position - b.position)
           .map((task) => ({ ...task, position: task.position })),
       },
       {
         title: "For Review",
         type: "for-review",
+        columnId:
+          data.find((task) => task.status === "for-review")?.columnId ??
+          "for-review",
         tasks: data
           .filter((task) => task.status === "for-review")
+          .sort((a, b) => a.position - b.position)
           .map((task) => ({ ...task, position: task.position })),
       },
       {
         title: "Done",
         type: "done",
+        columnId:
+          data.find((task) => task.status === "done")?.columnId ?? "done",
         tasks: data
           .filter((task) => task.status === "done")
+          .sort((a, b) => a.position - b.position)
           .map((task) => ({ ...task, position: task.position })),
       },
     ]);
@@ -76,7 +92,7 @@ function Board() {
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
     const id = active.id as string;
-    console.log("drag start", id);
+    console.log("[DND] Drag Start - Task ID:", id);
     // Find the task that's being dragged
     const draggedTask = columns
       .map((col) => col.tasks)
@@ -85,11 +101,18 @@ function Board() {
 
     if (draggedTask) {
       setActiveTask(draggedTask);
+      console.log("[DND] Drag Start - Task Data:", draggedTask);
     }
   };
 
   const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
+    console.log(
+      "[DND] Drag Over - Active ID:",
+      active.id,
+      "Over ID:",
+      over?.id
+    );
 
     // If no over target or tasks are the same, skip
     if (!over || active.id === over.id) {
@@ -208,7 +231,7 @@ function Board() {
           ...newColumns[destColumnIndex],
           tasks: updatedDestTasks,
         };
-
+        console.log("In handleDragOver");
         return newColumns;
       });
     }
@@ -216,171 +239,156 @@ function Board() {
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-
-    // Reset active task
     setActiveTask(null);
 
-    // If no over target, just return
-    if (!over) return;
+    if (!over) {
+      console.log("No over element");
+      return;
+    }
 
     const activeId = active.id as string;
     const overId = over.id as string;
 
-    // If items are the same, no need to do anything
-    if (activeId === overId) return;
+    if (activeId === overId) {
+      console.log("Dropped on the same element");
+      return;
+    }
 
-    // Find all tasks
     const allTasks = columns.map((col) => col.tasks).flat();
-
-    // Find the tasks we're working with
     const activeTask = allTasks.find((task) => task.id === activeId);
     const overTask = allTasks.find((task) => task.id === overId);
+    console.log("activeTask", activeTask, "overTask", overTask);
 
-    // If we can't find the active task, return
-    if (!activeTask) return;
+    if (!activeTask) {
+      console.log("No active task found");
+      return;
+    }
 
-    // Check if over target is a column (for empty columns)
     const overColumn = columns.find((col) => col.type === overId);
     if (overColumn && activeTask.columnId !== overColumn.type) {
+      console.log("Moving to a different column over column header");
       setColumns((prevColumns) => {
-        const sourceColumnIndex = prevColumns.findIndex(
-          (col) => col.type === activeTask.columnId
+        const sourceIndex = prevColumns.findIndex(
+          (c) => c.type === activeTask.columnId
         );
-        const destColumnIndex = prevColumns.findIndex(
-          (col) => col.type === overColumn.type
+        const destIndex = prevColumns.findIndex(
+          (c) => c.type === overColumn.type
         );
-        if (sourceColumnIndex === -1 || destColumnIndex === -1)
-          return prevColumns;
-        const sourceColumn = prevColumns[sourceColumnIndex];
-        const destColumn = prevColumns[destColumnIndex];
-        const updatedSourceTasks = sourceColumn.tasks.filter(
-          (task) => task.id !== activeId
-        );
-        const updatedTask = {
+        if (sourceIndex === -1 || destIndex === -1) return prevColumns;
+
+        const sourceCol = prevColumns[sourceIndex];
+        const destCol = prevColumns[destIndex];
+        const movedTask = {
           ...activeTask,
           columnId: overColumn.type,
           status: overColumn.type,
         };
-        const updatedDestTasks = [...destColumn.tasks, updatedTask];
+
+        const updatedSource = sourceCol.tasks
+          .filter((t) => t.id !== activeId)
+          .map((t, i) => ({ ...t, position: i + 1 }));
+
+        const updatedDest = [...destCol.tasks, movedTask].map((t, i) => ({
+          ...t,
+          position: i + 1,
+        }));
+
         const newColumns = [...prevColumns];
-        newColumns[sourceColumnIndex] = {
-          ...sourceColumn,
-          tasks: updatedSourceTasks.map((task, idx) => ({
-            ...task,
-            position: idx + 1,
-          })),
-        };
-        newColumns[destColumnIndex] = {
-          ...destColumn,
-          tasks: updatedDestTasks.map((task, idx) => ({
-            ...task,
-            position: idx + 1,
-          })),
-        };
+        newColumns[sourceIndex] = { ...sourceCol, tasks: updatedSource };
+        newColumns[destIndex] = { ...destCol, tasks: updatedDest };
+
+        const updatedTasks = newColumns.flatMap((col) => col.tasks);
+        updateTasks(updatedTasks);
+
         return newColumns;
       });
       return;
     }
 
-    // If we can't find either task, return
-    if (!overTask) return;
+    if (!overTask) {
+      console.log("No over element");
+      return;
+    }
 
-    // Handle reordering within the same column
     if (activeTask.columnId === overTask.columnId) {
+      console.log("Moving within the same column");
+      console.log("prevColumns", columns);
+      console.log("activeTask", activeTask);
       setColumns((prevColumns) => {
-        // Find the column index
         const columnIndex = prevColumns.findIndex(
-          (col) => col.type === activeTask.columnId
+          (col) => col.columnId === activeTask.columnId  //managed to fix moving columns
         );
-
+        console.log("columnIndex", columnIndex);
         if (columnIndex === -1) return prevColumns;
 
         const column = prevColumns[columnIndex];
-
-        // Find indices for the active and over tasks
         const activeIndex = column.tasks.findIndex(
           (task) => task.id === activeId
         );
         const overIndex = column.tasks.findIndex((task) => task.id === overId);
 
-        // Create new columns with the reordered tasks
+        const reorderedTasks = arrayMove(
+          column.tasks,
+          activeIndex,
+          overIndex
+        ).map((t, i) => ({ ...t, position: i + 1 }));
+
         const newColumns = [...prevColumns];
-        newColumns[columnIndex] = {
-          ...column,
-          tasks: arrayMove(column.tasks, activeIndex, overIndex).map(
-            (task, idx) => ({
-              ...task,
-              position: idx + 1, // Update position based on new position
-            })
-          ),
-        };
+        newColumns[columnIndex] = { ...column, tasks: reorderedTasks };
+
+        const updatedTasks = newColumns.flatMap((col) => col.tasks);
+        console.log("updatedTasks", updatedTasks);
+        updateTasks(updatedTasks);
 
         return newColumns;
       });
     } else {
-      // This is a fallback - the task should have already been moved in handleDragOver
-      // But we'll handle the case where a task is moved to a different column here too
+      console.log("Moving between columns via task");
+
       setColumns((prevColumns) => {
-        // Find indices for source and destination columns
-        const sourceColumnIndex = prevColumns.findIndex(
-          (col) => col.type === activeTask.columnId
+        const sourceIndex = prevColumns.findIndex(
+          (c) => c.type === activeTask.columnId
         );
-        const destColumnIndex = prevColumns.findIndex(
-          (col) => col.type === overTask.columnId
+        const destIndex = prevColumns.findIndex(
+          (c) => c.type === overTask.columnId
         );
+        if (sourceIndex === -1 || destIndex === -1) return prevColumns;
 
-        if (sourceColumnIndex === -1 || destColumnIndex === -1)
-          return prevColumns;
-
-        // Remove task from source column
-        const sourceColumn = prevColumns[sourceColumnIndex];
-        const destColumn = prevColumns[destColumnIndex];
-
-        const updatedSourceTasks = sourceColumn.tasks.filter(
-          (task) => task.id !== activeId
-        );
-
-        // Find the position in the destination column
-        const overTaskIndex = destColumn.tasks.findIndex(
-          (task) => task.id === overId
-        );
-
-        // Create new task with updated properties
-        const updatedTask = {
+        const sourceCol = prevColumns[sourceIndex];
+        const destCol = prevColumns[destIndex];
+        const movedTask = {
           ...activeTask,
           columnId: overTask.columnId,
           status: overTask.status,
         };
 
-        // Insert task into destination column at the right position
-        const updatedDestTasks = [...destColumn.tasks];
-        updatedDestTasks.splice(overTaskIndex + 1, 0, updatedTask);
+        const updatedSource = sourceCol.tasks
+          .filter((t) => t.id !== activeId)
+          .map((t, i) => ({ ...t, position: i + 1 }));
 
-        // Create new columns array with updated columns
+        const overIndex = destCol.tasks.findIndex((t) => t.id === overId);
+        const updatedDest = [...destCol.tasks];
+        updatedDest.splice(overIndex + 1, 0, movedTask);
+
+        const normalizedDest = updatedDest.map((t, i) => ({
+          ...t,
+          position: i + 1,
+        }));
+
         const newColumns = [...prevColumns];
-        newColumns[sourceColumnIndex] = {
-          ...sourceColumn,
-          tasks: updatedSourceTasks.map((task, idx) => ({
-            ...task,
-            position: idx + 1, // Update position in source column
-          })),
-        };
+        newColumns[sourceIndex] = { ...sourceCol, tasks: updatedSource };
+        newColumns[destIndex] = { ...destCol, tasks: normalizedDest };
 
-        newColumns[destColumnIndex] = {
-          ...destColumn,
-          tasks: updatedDestTasks.map((task, idx) => ({
-            ...task,
-            position: idx + 1, // Update position in destination column
-          })),
-        };
+        const updatedTasks = newColumns.flatMap((col) => col.tasks);
+        updateTasks(updatedTasks);
 
         return newColumns;
       });
     }
   };
 
-  console.log("columns", columns);
-  console.log("data", data);
+  // console.log("columns", columns);
+  // console.log("data", data);
   const handleAddTask = async (task: Omit<TaskCardType, "id" | "position">) => {
     try {
       // Call your API to create the task in the backend
@@ -389,7 +397,7 @@ function Board() {
         boardId, // make sure boardId is included
         // position: (columns.find(col => col.type === task.status)?.tasks.length ?? 0) + 1,
       });
-      
+
       // Add the new task to the correct column in the UI
       setColumns((prev) =>
         prev.map((col) =>
@@ -427,6 +435,7 @@ function Board() {
             <Column
               key={column.type}
               column={{
+                columnId: column.columnId,
                 title: column.title,
                 type: column.type,
                 tasks: column.tasks,
