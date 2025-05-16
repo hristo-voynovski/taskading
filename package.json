@@ -2,6 +2,7 @@
   "name": "taskading-root",
   "private": true,
   "scripts": {
-    "fstart": "npm --prefix frontend run dev"
+    "fstart": "npm --prefix frontend run dev",
+    "host": "npm --prefix frontend run host"
   }
 }

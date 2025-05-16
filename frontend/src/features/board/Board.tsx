@@ -285,17 +285,19 @@ function Board() {
     }
 
     const activeId = active.id as string;
+    console.log("activeId", activeId);
     const overId = over.id as string;
-
+    console.log("overId", overId);
     const isDroppingIntoColumn = columns.some((col) => col.columnId === overId);
 
     if (isDroppingIntoColumn) {
       const activeTask = columns
         .flatMap((col) => col.tasks)
         .find((t) => t.id === activeId);
+        console.log("activeTask", activeTask);
       const overColumn = columns.find((col) => col.columnId === overId);
       const sourceColumn = columns.find(
-        (col) => col.columnId === activeTask?.columnId
+        (col) => col.columnId === draggedFromColumnId.current
       );
       console.log("Dropping onto column", overId);
       console.log("Found activeTask:", activeTask);
@@ -307,35 +309,40 @@ function Board() {
       }
 
       console.log("Moving to empty column in handleDragEnd");
+      console.log("sourceColumn", sourceColumn.tasks);
 
       const updatedSourceTasks = sourceColumn.tasks
         .filter((t) => t.id !== activeTask.id)
         .map((t, i) => ({ ...t, position: i + 1 }));
+      
+      console.log("updatedSourceTasks", updatedSourceTasks.map((t) => t.title));
 
-      const updatedTask = {
-        ...activeTask,
-        columnId: overColumn.columnId,
-        status: overColumn.type,
-      };
+      // const updatedTask = {
+      //   ...activeTask,
+      //   columnId: overColumn.columnId,
+      //   status: overColumn.type,
+      // };
 
-      const updatedDestTasks = [...overColumn.tasks, updatedTask].map(
-        (t, i) => ({
-          ...t,
-          position: i + 1,
-        })
-      );
+      // const updatedDestTasks = [...overColumn.tasks, updatedTask].map(
+      //   (t, i) => ({
+      //     ...t,
+      //     position: i + 1,
+      //   })
+      // );
+      // console.log("updatedDestTasks", updatedDestTasks.map((t) => t.title));
 
       const newColumns = columns.map((col) => {
         if (col.columnId === sourceColumn.columnId) {
           return { ...col, tasks: updatedSourceTasks };
         }
         if (col.columnId === overColumn.columnId) {
-          return { ...col, tasks: updatedDestTasks };
+          return { ...col, tasks: overColumn.tasks };
         }
         return col;
       });
-
+      console.log("newColumns", newColumns);
       const updatedTasks = newColumns.flatMap((col) => col.tasks);
+      console.log("updatedTasks", updatedTasks);
       setColumns(newColumns);
       updateTasks(updatedTasks);
       draggedFromColumnId.current = null;
