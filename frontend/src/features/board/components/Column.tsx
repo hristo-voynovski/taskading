@@ -6,15 +6,18 @@ import {
 import SortableTaskCard from "./SortableTaskCard";
 import { cn } from "@/lib/utils";
 import { useDroppable } from "@dnd-kit/core";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 type ColumnProps = {
   column: ColumnType;
+  onAddClick: () => void;
 };
 
-function Column({ column }: ColumnProps) {
+function Column({ column, onAddClick }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: column.columnId,
-    data: { type: "column"},
+    data: { type: "column" },
   });
 
   const columnStyles = {
@@ -26,6 +29,15 @@ function Column({ column }: ColumnProps) {
     done: "bg-green-100 dark:bg-green-700 border-green-200 dark:border-green-600",
   };
 
+  const buttonStyles = {
+    todo: "bg-blue-200 hover:bg-blue-300 dark:bg-blue-500 dark:hover:bg-blue-400",
+    "in-progress":
+      "bg-yellow-200 hover:bg-yellow-300 dark:bg-yellow-500 dark:hover:bg-yellow-400",
+    "for-review":
+      "bg-purple-200 hover:bg-purple-300 dark:bg-purple-500 dark:hover:bg-purple-400",
+    done: "bg-green-200 hover:bg-green-300 dark:bg-green-500 dark:hover:bg-green-400",
+  };
+
   return (
     <div
       ref={setNodeRef}
@@ -35,7 +47,12 @@ function Column({ column }: ColumnProps) {
         isOver && "ring-2 ring-offset-2 ring-blue-500 dark:ring-blue-400"
       )}
     >
-      <h2 className="text-xl font-semibold mb-4">{column.title}</h2>
+      <div className="flex items-start justify-between mb-4">
+        <h2 className="text-xl font-semibold mb-4">{column.title}</h2>
+        <Button className={buttonStyles[column.type]} size="icon" onClick={onAddClick}>
+          <Plus className="text-black dark:text-white" />
+        </Button>
+      </div>
       <div className="flex-1">
         <SortableContext
           id={column.type}

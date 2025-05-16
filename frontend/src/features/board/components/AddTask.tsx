@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,32 +23,41 @@ import { TaskCardType } from "../types";
 
 type Props = {
   onSubmit: (task: Omit<TaskCardType, "id" | "position">) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  initialStatus?: TaskCardType["status"];
 };
 
-function AddTask({ onSubmit }: Props) {
-  const [open, setOpen] = useState(false);
+function AddTask({
+  onSubmit,
+  open,
+  onOpenChange,
+  initialStatus = "todo",
+}: Props) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [status, setStatus] = useState<
     "todo" | "in-progress" | "for-review" | "done"
-  >("todo");
+  >(initialStatus);
+
+  console.log("status", status);
+
+  useEffect(() => {
+    if (open) {
+      setTitle("");
+      setContent("");
+      setStatus(initialStatus);
+    }
+  }, [open, initialStatus]);
 
   const handleSubmit = () => {
     if (!title.trim() || !content.trim()) return;
     onSubmit({ title, content, status, columnId: status });
-    setTitle("");
-    setContent("");
-    setStatus("todo");
-    setOpen(false);
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="w-sm">
-          Add Task
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add Task</DialogTitle>
@@ -67,6 +76,7 @@ function AddTask({ onSubmit }: Props) {
             <Label htmlFor="task-status">Task Status</Label>
             <Select
               required
+              value={status}
               onValueChange={(value: TaskCardType["status"]) =>
                 setStatus(value)
               }
@@ -94,7 +104,9 @@ function AddTask({ onSubmit }: Props) {
           </div>
         </div>
         <DialogFooter className="flex justify-end space-x-2">
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button type="submit" onClick={handleSubmit}>
             Add Task
           </Button>

@@ -294,7 +294,7 @@ function Board() {
       const activeTask = columns
         .flatMap((col) => col.tasks)
         .find((t) => t.id === activeId);
-        console.log("activeTask", activeTask);
+      console.log("activeTask", activeTask);
       const overColumn = columns.find((col) => col.columnId === overId);
       const sourceColumn = columns.find(
         (col) => col.columnId === draggedFromColumnId.current
@@ -314,8 +314,11 @@ function Board() {
       const updatedSourceTasks = sourceColumn.tasks
         .filter((t) => t.id !== activeTask.id)
         .map((t, i) => ({ ...t, position: i + 1 }));
-      
-      console.log("updatedSourceTasks", updatedSourceTasks.map((t) => t.title));
+
+      console.log(
+        "updatedSourceTasks",
+        updatedSourceTasks.map((t) => t.title)
+      );
 
       // const updatedTask = {
       //   ...activeTask,
@@ -482,8 +485,16 @@ function Board() {
     }
   };
 
-  // console.log("columns", columns);
-  // console.log("data", data);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [selectedStatus, setSelectedStatus] =
+    useState<TaskCardType["status"]>("todo");
+
+  const handleColumnAddClick = (status: TaskCardType["status"]) => {
+    console.log("handleColumnAddClick", status);
+    setSelectedStatus(status);
+    setAddDialogOpen(true);
+  };
+
   const handleAddTask = async (task: Omit<TaskCardType, "id" | "position">) => {
     try {
       // Call your API to create the task in the backend
@@ -516,7 +527,12 @@ function Board() {
   return (
     <div className="mt-8 mb-16 flex flex-1 flex-col w-full h-full overflow-hidden">
       <div className="flex flex-row w-full items-center justify-center">
-        <AddTask onSubmit={handleAddTask} />
+        <AddTask
+          open={addDialogOpen}
+          onOpenChange={setAddDialogOpen}
+          onSubmit={handleAddTask}
+          initialStatus={selectedStatus}
+        />
       </div>
       <DndContext
         sensors={sensors}
@@ -529,6 +545,7 @@ function Board() {
           {columns.map((column) => (
             <Column
               key={column.type}
+              onAddClick={() => handleColumnAddClick(column.type)}
               column={{
                 columnId: column.columnId,
                 title: column.title,
