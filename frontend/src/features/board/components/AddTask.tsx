@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -51,7 +52,7 @@ function AddTask({
   }, [open, initialStatus]);
 
   const handleSubmit = () => {
-    if (!title.trim() || !content.trim()) return;
+    if (!title.trim()) return;
     onSubmit({ title, content, status, columnId: status });
     onOpenChange(false);
   };
@@ -70,6 +71,12 @@ function AddTask({
               id="task-title"
               placeholder="Task Title"
               onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+              }}
             />
           </div>
           <div className="grid gap-2">
@@ -96,10 +103,17 @@ function AddTask({
           </div>
           <div className="grid gap-2">
             <Label htmlFor="task-content">Task Content</Label>
-            <Input
+            <Textarea
               id="task-content"
+              className="max-h-[45vh]"
               placeholder="Task Content"
               onChange={(e) => setContent(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+              }}
             />
           </div>
         </div>
