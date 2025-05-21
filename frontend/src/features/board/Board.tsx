@@ -18,7 +18,6 @@ function Board() {
   useTasksRealtime(boardId);
   const [columns, setColumns] = useState<ColumnType[]>([]);
   useEffect(() => {
-    // console.log("In useEffect row 33");
     if (!data || !columnData) return;
     setColumns([
       {
@@ -82,7 +81,6 @@ function Board() {
     useState<TaskCardType["status"]>("todo");
 
   const handleColumnAddClick = (status: TaskCardType["status"]) => {
-    console.log("handleColumnAddClick", status);
     setSelectedStatus(status);
     setAddDialogOpen(true);
   };

@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 
 const ThemeToggle = () => {
   const { theme, setTheme } = useTheme();
-  console.log("ThemeToggle rendered with theme:", theme);
 
   const changeTheme = () => {
     if (theme === "dark") {

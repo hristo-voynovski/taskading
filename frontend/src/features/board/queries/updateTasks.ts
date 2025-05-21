@@ -6,19 +6,16 @@ export const updateTasks = async (
 ) => {
   const updates = tasks.map(({ id, columnId, position, title, content }) => ({
     id,
-    column_id: columnId, // match DB column name
+    column_id: columnId, 
     position,
     title,
     content,
   }));
-  console.log("[SUPABASE] Updating task positions");
   const { error } = await supabase.from("tasks").upsert(updates, {
     onConflict: "id",
   });
 
   if (error) {
-    console.error("[SUPABASE] Failed to update task positions", error);
-  } else {
-    console.log("[SUPABASE] Task positions updated successfully");
+   throw new Error(error.message);
   }
 };

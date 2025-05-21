@@ -36,7 +36,6 @@ function TaskCard({ task, columnType }: TaskCardProps) {
     try {
       await deleteTask(task.id);
       setOpen(false);
-      // Optionally: trigger a UI update here (e.g., refetch tasks or update state)
     } catch (error) {
       console.error("Failed to delete task:", error);
     }

@@ -4,13 +4,11 @@ import { TaskCardType } from "../types";
 type NewTask = Omit<TaskCardType, "id" | "position"> & { boardId: string };
 
 export const createTask = async (task: NewTask) => {
-    console.log(task)
-    // Step 1: Find column_id for the given board and status
   const { data: columnData, error: columnError } = await supabase
     .from("columns")
     .select("id")
     .eq("board_id", task.boardId)
-    .eq("name", task.status) // use mapped name
+    .eq("name", task.status)
     .single();
 
   if (columnError || !columnData) {
@@ -19,7 +17,6 @@ export const createTask = async (task: NewTask) => {
 
   const columnId = columnData.id;
 
-  // Step 2: Get current max position in this column
   const { data: maxResult, error: maxError } = await supabase
     .from("tasks")
     .select("position")
@@ -34,7 +31,6 @@ export const createTask = async (task: NewTask) => {
   const maxPosition = maxResult?.[0]?.position ?? -1;
   const newPosition = maxPosition + 1;
 
-  // Step 3: Insert task
   const { data: taskData, error: insertError } = await supabase
     .from("tasks")
     .insert([
@@ -54,6 +50,6 @@ export const createTask = async (task: NewTask) => {
 
   return {
     ...taskData,
-    status: taskData.columns.name, // return the human-readable status
+    status: taskData.columns.name, 
   };
 };
