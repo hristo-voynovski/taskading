@@ -42,18 +42,18 @@ function Column({ column, onAddClick }: ColumnProps) {
     <div
       ref={setNodeRef}
       className={cn(
-        "flex flex-col flex-1 min-w-[280px] max-w-[340px] m-2 rounded-lg border-2 p-4 overflow-y-auto overflow-x-hidden scrollbar scroll-smooth",
+        "flex flex-col flex-1 min-w-[280px] max-w-[340px] m-2 rounded-lg border-2",
         columnStyles[column.type],
         isOver && "ring-2 ring-offset-2 ring-blue-500 dark:ring-blue-400"
       )}
     >
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between p-4">
         <h2 className="text-xl font-semibold mb-4">{column.title}</h2>
         <Button className={buttonStyles[column.type]} size="icon" onClick={onAddClick}>
           <Plus className="text-black dark:text-white" />
         </Button>
       </div>
-      <div className="flex-1">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar scroll-smooth p-4">
         <SortableContext
           id={column.type}
           items={column.tasks.map((task) => task.id)}

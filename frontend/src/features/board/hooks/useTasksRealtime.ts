@@ -32,6 +32,18 @@ export const useTasksRealtime = (boardId: string) => {
           queryClient.refetchQueries({ queryKey: ["tasks", boardId] });
         }
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "tasks",
+        },
+        (payload) => {
+          // console.log("Change received! (DELETE)", payload);
+          queryClient.refetchQueries({ queryKey: ["tasks", boardId] });
+        }
+      )
       .subscribe();
 
     return () => {
