@@ -2,6 +2,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import TaskCard from "./TaskCard";
 import { TaskCardType } from "../types";
+import { useDndContext } from "@dnd-kit/core";
 
 type Props = {
   task: TaskCardType;
@@ -17,10 +18,13 @@ export default function SortableTaskCard({ task }: Props) {
     isDragging,
   } = useSortable({ id: task.id, data: { type: "task", task } });
 
+  const { active } = useDndContext();
+  const isPlaceholder = active?.id === task.id && !isDragging;
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.8 : 1,
+    opacity: isDragging ? 0.5 : 1,
     zIndex: isDragging ? 100000 : "auto",
   };
 
